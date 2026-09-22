@@ -15,13 +15,24 @@ from sklearn.metrics import auc, mean_absolute_error, mean_squared_error, precis
 import torch
 import torch.nn as nn
 from torch.optim import Adam, Optimizer
-from torch.optim.lr_scheduler import _LRScheduler
+try:
+    from torch.optim.lr_scheduler import LRScheduler as _LRScheduler
+except ImportError:  # PyTorch < 2.0
+    from torch.optim.lr_scheduler import _LRScheduler
 from tqdm import tqdm
 
 from chemprop.args import PredictArgs, TrainArgs
 from chemprop.data import StandardScaler, MoleculeDataset, preprocess_smiles_columns, get_task_names
 from chemprop.models import MoleculeModel
 from chemprop.nn_utils import NoamLR
+
+
+def _torch_load_compat(path):
+    """Loads trusted Chemprop checkpoints across old and new PyTorch versions."""
+    try:
+        return torch.load(path, map_location=lambda storage, loc: storage, weights_only=False)
+    except TypeError:  # PyTorch versions before the weights_only keyword
+        return torch.load(path, map_location=lambda storage, loc: storage)
 
 
 def makedirs(path: str, isfile: bool = False) -> None:
@@ -102,7 +113,7 @@ def load_checkpoint(path: str,
         debug = info = print
 
     # Load model and args
-    state = torch.load(path, map_location=lambda storage, loc: storage)
+    state = _torch_load_compat(path)
     args = TrainArgs()
     args.from_dict(vars(state['args']), skip_unsettable=True)
     loaded_state_dict = state['state_dict']
@@ -153,7 +164,7 @@ def load_scalers(path: str) -> Tuple[StandardScaler, StandardScaler, StandardSca
     :return: A tuple with the data :class:`~chemprop.data.scaler.StandardScaler`
              and features :class:`~chemprop.data.scaler.StandardScaler`.
     """
-    state = torch.load(path, map_location=lambda storage, loc: storage)
+    state = _torch_load_compat(path)
 
     scaler = StandardScaler(state['data_scaler']['means'],
                             state['data_scaler']['stds']) if state['data_scaler'] is not None else None
@@ -186,7 +197,7 @@ def load_args(path: str) -> TrainArgs:
     :return: The :class:`~chemprop.args.TrainArgs` object that the model was trained with.
     """
     args = TrainArgs()
-    args.from_dict(vars(torch.load(path, map_location=lambda storage, loc: storage)['args']), skip_unsettable=True)
+    args.from_dict(vars(_torch_load_compat(path)['args']), skip_unsettable=True)
 
     return args
 
