@@ -5,7 +5,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch.optim import Optimizer
-from torch.optim.lr_scheduler import _LRScheduler
+try:
+    from torch.optim.lr_scheduler import LRScheduler as _LRScheduler
+except ImportError:  # PyTorch < 2.0
+    from torch.optim.lr_scheduler import _LRScheduler
 from tqdm import tqdm
 
 from chemprop.data import MoleculeDataLoader, MoleculeDataset
