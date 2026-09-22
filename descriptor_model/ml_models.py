@@ -57,13 +57,13 @@ for predictor in ['XGBoost', 'SVM', 'GB', 'RF']:
         y_test_predict = regr.predict(X_test)
 
         r2_train = r2_score(y_train, y_train_predict)
-        mse_train = mean_squared_error(y_train, y_train_predict, squared=False)
+        mse_train = np.sqrt(mean_squared_error(y_train, y_train_predict))
         mae_train = mean_absolute_error(y_train, y_train_predict)
         r2_dev = r2_score(y_dev, y_dev_predict)
-        mse_dev = mean_squared_error(y_dev, y_dev_predict, squared=False)
+        mse_dev = np.sqrt(mean_squared_error(y_dev, y_dev_predict))
         mae_dev = mean_absolute_error(y_dev, y_dev_predict)
         r2_test = r2_score(y_test, y_test_predict)
-        mse_test = mean_squared_error(y_test, y_test_predict, squared=False)
+        mse_test = np.sqrt(mean_squared_error(y_test, y_test_predict))
         mae_test = mean_absolute_error(y_test, y_test_predict)
 
         results.loc[i, "train_score"] = r2_train
