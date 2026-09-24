@@ -14,14 +14,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      AUDIO_URL: "https://sdmntprnznorth.oaiusercontent.com/files/00000000-70b8-820b-88da-3a70b6a57162/raw?se=2026-09-24T07%3A20%3A21Z&sp=r&sv=2026-02-06&sr=b&scid=145566ce-e4ec-50f2-956f-b27fa7b8fbe6&skoid=03727f49-62d3-42ac-8350-1c0e6559d238&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-24T01%3A12%3A17Z&ske=2026-09-25T01%3A12%3A17Z&sks=b&skv=2026-02-06&sig=q1i8GrkCtQV/kuI/Uw3De2p42xx75WvT19vvZIgWJEU%3D"
+      AUDIO_URL: "https://sdmntprjapaneast.oaiusercontent.com/files/00000000-61ec-8209-b50a-2cd995ed0b3a/raw?se=2026-09-24T07%3A23%3A41Z&sp=r&sv=2026-02-06&sr=b&scid=279b4bc4-94c2-5c32-a69c-06d5753c2d12&skoid=03727f49-62d3-42ac-8350-1c0e6559d238&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-24T01%3A11%3A08Z&ske=2026-09-25T01%3A11%3A08Z&sks=b&skv=2026-02-06&sig=Dxoyga1lQUr8u1ZnT84KB0SUMOjYQKJynZW0GiyPEis%3D"
     steps:
       - name: Download complete audio
         shell: bash
         run: |
           set -euxo pipefail
           curl -fL --retry 3 --retry-delay 2 "$AUDIO_URL" -o /tmp/voice079.mp3
-          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 /tmp/voice079.mp3
+          test -s /tmp/voice079.mp3
+          ls -lh /tmp/voice079.mp3
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -31,31 +32,29 @@ jobs:
       - name: Install faster-whisper
         run: python -m pip install --quiet faster-whisper
 
-      - name: Extract and transcribe 10-minute chunk
+      - name: Transcribe 10-minute clip
         env:
           IDX: ${{ matrix.idx }}
         shell: bash
         run: |
           set -euxo pipefail
-          START=$(( IDX * 600 ))
-          ffmpeg -y -hide_banner -loglevel error -ss "$START" -i /tmp/voice079.mp3 -t 600 -ac 1 -ar 16000 /tmp/chunk.wav
           mkdir -p out
           python - <<'PY'
           import json, os, time
           from faster_whisper import WhisperModel
           idx = int(os.environ["IDX"])
-          offset = idx * 600
+          start = idx * 600
+          end = min(start + 600, 7767)
           prompt = "Cabozantinib, 3D printing, HME, Hot-Melt Extrusion, MEX, DPE, Direct Powder Extrusion, DSC, STA, XRD, CRM, Raman, dissolution, PopPK, clearance, exposure, polymer, formulation, API, reference, method, material, Tg, glass transition temperature, crystalline, amorphous, solid dispersion, RCC, HCC, DTC, MTC, NET."
           t0 = time.time()
           model = WhisperModel("small", device="cpu", compute_type="int8")
           segments, info = model.transcribe(
-              "/tmp/chunk.wav",
+              "/tmp/voice079.mp3",
               language="zh",
               beam_size=1,
               best_of=1,
               temperature=0.0,
-              vad_filter=True,
-              vad_parameters={"min_silence_duration_ms": 400},
+              clip_timestamps=[start, end],
               condition_on_previous_text=True,
               initial_prompt=prompt,
               no_speech_threshold=0.6,
@@ -65,13 +64,14 @@ jobs:
           for s in segments:
               rows.append({
                   "chunk": idx,
-                  "start": offset + float(s.start),
-                  "end": offset + float(s.end),
+                  "start": float(s.start),
+                  "end": float(s.end),
                   "text": s.text.strip(),
               })
           obj = {
               "chunk": idx,
-              "offset": offset,
+              "clip_start": start,
+              "clip_end": end,
               "language": info.language,
               "language_probability": info.language_probability,
               "elapsed_seconds": time.time()-t0,
@@ -82,7 +82,7 @@ jobs:
           with open(f"out/chunk_{idx:02d}.txt","w",encoding="utf-8") as f:
               for r in rows:
                   f.write(f"[{r['start']:.2f}-{r['end']:.2f}] {r['text']}\n")
-          print(json.dumps({k:obj[k] for k in ["chunk","language","language_probability","elapsed_seconds"]},ensure_ascii=False))
+          print(json.dumps({k:obj[k] for k in ["chunk","clip_start","clip_end","language","elapsed_seconds"]},ensure_ascii=False))
           print("segments",len(rows))
           PY
 
