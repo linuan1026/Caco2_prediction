@@ -1,4 +1,4 @@
-name: ChatGPT Whisper Transcribe
+name: ChatGPT Whisper Transcribe 079
 on:
   push:
     branches:
@@ -6,89 +6,106 @@ on:
 
 jobs:
   transcribe:
-    strategy:
-      fail-fast: false
-      max-parallel: 13
-      matrix:
-        idx: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     runs-on: ubuntu-latest
-    timeout-minutes: 45
-    env:
-      AUDIO_URL: "https://sdmntprjapaneast.oaiusercontent.com/files/00000000-61ec-8209-b50a-2cd995ed0b3a/raw?se=2026-09-24T07%3A23%3A41Z&sp=r&sv=2026-02-06&sr=b&scid=279b4bc4-94c2-5c32-a69c-06d5753c2d12&skoid=03727f49-62d3-42ac-8350-1c0e6559d238&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-24T01%3A11%3A08Z&ske=2026-09-25T01%3A11%3A08Z&sks=b&skv=2026-02-06&sig=Dxoyga1lQUr8u1ZnT84KB0SUMOjYQKJynZW0GiyPEis%3D"
+    timeout-minutes: 60
     steps:
-      - name: Download complete audio
-        shell: bash
-        run: |
-          set -euxo pipefail
-          curl -fL --retry 3 --retry-delay 2 "$AUDIO_URL" -o /tmp/voice079.mp3
-          test -s /tmp/voice079.mp3
-          ls -lh /tmp/voice079.mp3
-
-      - name: Set up Python
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: "3.11"
 
       - name: Install faster-whisper
-        run: python -m pip install --quiet faster-whisper
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install faster-whisper
 
-      - name: Transcribe 10-minute clip
-        env:
-          IDX: ${{ matrix.idx }}
+      - name: Download audio chunks
         shell: bash
         run: |
           set -euxo pipefail
-          mkdir -p out
-          python - <<'PY'
-          import json, os, time
-          from faster_whisper import WhisperModel
-          idx = int(os.environ["IDX"])
-          start = idx * 600
-          end = min(start + 600, 7767)
-          prompt = "Cabozantinib, 3D printing, HME, Hot-Melt Extrusion, MEX, DPE, Direct Powder Extrusion, DSC, STA, XRD, CRM, Raman, dissolution, PopPK, clearance, exposure, polymer, formulation, API, reference, method, material, Tg, glass transition temperature, crystalline, amorphous, solid dispersion, RCC, HCC, DTC, MTC, NET."
-          t0 = time.time()
-          model = WhisperModel("small", device="cpu", compute_type="int8")
-          segments, info = model.transcribe(
-              "/tmp/voice079.mp3",
-              language="zh",
-              beam_size=1,
-              best_of=1,
-              temperature=0.0,
-              clip_timestamps=[start, end],
-              condition_on_previous_text=True,
-              initial_prompt=prompt,
-              no_speech_threshold=0.6,
-              hallucination_silence_threshold=1.5,
+          mkdir -p audio
+          curl -L --retry 3 -o audio/part0.m4a 'https://sdmntprindiasocentral.oaiusercontent.com/files/00000000-eb90-8211-8833-96dd8ddb2b34/raw?se=2026-09-24T07%3A55%3A18Z&sp=r&sv=2026-02-06&sr=b&scid=0899258b-b83e-5106-96fe-e363857c9f16&skoid=03727f49-62d3-42ac-8350-1c0e6559d238&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-24T05%3A18%3A01Z&ske=2026-09-25T05%3A18%3A01Z&sks=b&skv=2026-02-06&sig=S0Wgi60Sl2GUp9RGtvKU3w1b3QINRkEBOkYg9bmEnwY%3D'
+          curl -L --retry 3 -o audio/part1.m4a 'https://sdmntprnortheu.oaiusercontent.com/files/00000000-63c0-81f4-a651-a5b8f26edb08/raw?se=2026-09-24T07%3A55%3A35Z&sp=r&sv=2026-02-06&sr=b&scid=6c3658ce-33ff-5348-9df7-347f94190f51&skoid=03727f49-62d3-42ac-8350-1c0e6559d238&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-24T07%3A37%3A27Z&ske=2026-09-25T07%3A37%3A27Z&sks=b&skv=2026-02-06&sig=hiaElIIi6bEVFZIwueKJvcH7Rmuv7k48hGjxNN5m2pI%3D'
+          curl -L --retry 3 -o audio/part2.m4a 'https://sdmntprbrazilsouth.oaiusercontent.com/files/00000000-25ac-820e-82b6-9d16de675aa5/raw?se=2026-09-24T07%3A55%3A47Z&sp=r&sv=2026-02-06&sr=b&scid=b76f57f0-e4b7-59a3-af3c-7f99e7490b3a&skoid=03727f49-62d3-42ac-8350-1c0e6559d238&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-24T07%3A44%3A07Z&ske=2026-09-25T07%3A44%3A07Z&sks=b&skv=2026-02-06&sig=TFUo91hNOUWz66%2BoD7qFuR2SNsk%2BZ0FQD7PtAxT3YkI%3D'
+          curl -L --retry 3 -o audio/part3.m4a 'https://sdmntprindiasocentral.oaiusercontent.com/files/00000000-13a4-8211-a1ca-11670fafbdc9/raw?se=2026-09-24T07%3A56%3A02Z&sp=r&sv=2026-02-06&sr=b&scid=343a704e-adb2-5ced-9ad6-d6cc357d3c11&skoid=03727f49-62d3-42ac-8350-1c0e6559d238&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-24T04%3A48%3A40Z&ske=2026-09-25T04%3A48%3A40Z&sks=b&skv=2026-02-06&sig=fbBTrlRrkXEWSVYCFBLH9K8ZjZcHVbNpkBBavoDBtJA%3D'
+          ls -lh audio
+
+      - name: Transcribe with faster-whisper
+        shell: bash
+        run: |
+          cat > transcribe.py <<'PY'
+          import json, os
+          from faster_whisper import WhisperModel, BatchedInferencePipeline
+
+          model = WhisperModel("small", device="cpu", compute_type="int8", cpu_threads=4)
+          pipe = BatchedInferencePipeline(model=model)
+          prompt = (
+              "Cabozantinib, 3D printing, individualized dosing, immediate release, HME, Hot-Melt Extrusion, "
+              "MEX, Material Extrusion, DPE, Direct Powder Extrusion, DSC, STA, XRD, CRM, Confocal Raman "
+              "microspectroscopy, melt rheology, shear rate, Tg, glass transition temperature, Tm, crystalline, "
+              "amorphous, solid dispersion, dissolution, PopPK, clearance, exposure, RCC, HCC, DTC, MTC, NET, "
+              "polymer, formulation, API, reference, method, material, Cometriq, Cabometyx, SOR, KIR, PAR, CCS, SSG, AER"
           )
-          rows = []
-          for s in segments:
-              rows.append({
-                  "chunk": idx,
-                  "start": float(s.start),
-                  "end": float(s.end),
-                  "text": s.text.strip(),
-              })
-          obj = {
-              "chunk": idx,
-              "clip_start": start,
-              "clip_end": end,
-              "language": info.language,
-              "language_probability": info.language_probability,
-              "elapsed_seconds": time.time()-t0,
-              "segments": rows,
-          }
-          with open(f"out/chunk_{idx:02d}.json","w",encoding="utf-8") as f:
-              json.dump(obj,f,ensure_ascii=False,indent=2)
-          with open(f"out/chunk_{idx:02d}.txt","w",encoding="utf-8") as f:
-              for r in rows:
-                  f.write(f"[{r['start']:.2f}-{r['end']:.2f}] {r['text']}\n")
-          print(json.dumps({k:obj[k] for k in ["chunk","clip_start","clip_end","language","elapsed_seconds"]},ensure_ascii=False))
-          print("segments",len(rows))
+          parts = [
+              ("audio/part0.m4a", 0.0),
+              ("audio/part1.m4a", 2400.014512),
+              ("audio/part2.m4a", 4800.020521),
+              ("audio/part3.m4a", 5966.039523),
+          ]
+          all_rows = []
+          os.makedirs("out", exist_ok=True)
+          for idx, (src, offset) in enumerate(parts):
+              print("TRANSCRIBING", idx, src, flush=True)
+              segments, info = pipe.transcribe(
+                  src,
+                  language="zh",
+                  beam_size=1,
+                  best_of=1,
+                  batch_size=16,
+                  vad_filter=True,
+                  vad_parameters={"min_silence_duration_ms": 400},
+                  initial_prompt=prompt,
+                  without_timestamps=False,
+              )
+              rows = []
+              for s in segments:
+                  row = {
+                      "part": idx,
+                      "start": round(offset + s.start, 3),
+                      "end": round(offset + s.end, 3),
+                      "text": s.text.strip(),
+                  }
+                  rows.append(row)
+                  all_rows.append(row)
+              with open(f"out/part{idx}.json", "w", encoding="utf-8") as f:
+                  json.dump(rows, f, ensure_ascii=False, indent=2)
+              print("PART_DONE", idx, len(rows), flush=True)
+
+          with open("out/full.json", "w", encoding="utf-8") as f:
+              json.dump(all_rows, f, ensure_ascii=False, indent=2)
+
+          def ts(sec):
+              ms = int(round((sec - int(sec))*1000))
+              sec = int(sec)
+              h, sec = divmod(sec, 3600)
+              m, s = divmod(sec, 60)
+              return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
+
+          with open("out/full.txt", "w", encoding="utf-8") as f:
+              for r in all_rows:
+                  f.write(f"[{ts(r['start'])[:-4]}] {r['text']}\n")
+
+          with open("out/full.srt", "w", encoding="utf-8") as f:
+              for i, r in enumerate(all_rows, 1):
+                  f.write(f"{i}\n{ts(r['start'])} --> {ts(r['end'])}\n{r['text']}\n\n")
+
+          print("ALL_DONE", len(all_rows), flush=True)
           PY
+          python transcribe.py
 
       - name: Upload transcript
         uses: actions/upload-artifact@v4
         with:
-          name: whisper-transcript-${{ matrix.idx }}
+          name: whisper079-transcript
           path: out
           retention-days: 1
