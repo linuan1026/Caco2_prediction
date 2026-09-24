@@ -14,14 +14,13 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Download faster-whisper wheels and multilingual small model
+      - name: Download faster-whisper multilingual small model
         shell: bash
         run: |
           set -euxo pipefail
           python -m pip install --upgrade pip
-          mkdir -p bundle/wheels bundle/model
-          python -m pip download --dest bundle/wheels faster-whisper
           python -m pip install --no-cache-dir faster-whisper huggingface-hub
+          mkdir -p bundle/model bundle/model_meta bundle/model_parts
           python - <<'PY'
           from huggingface_hub import snapshot_download
           snapshot_download(
@@ -29,20 +28,48 @@ jobs:
               local_dir="bundle/model",
           )
           PY
-          du -sh bundle/model bundle/wheels
+          cp -a bundle/model/. bundle/model_meta/
+          rm -f bundle/model_meta/model.bin
+          split -b 120M -d -a 2 bundle/model/model.bin bundle/model_parts/model.bin.part-
+          ls -lh bundle/model/model.bin bundle/model_parts/*
+          du -sh bundle/model_meta bundle/model_parts
 
-      - name: Upload Whisper model
+      - name: Upload model metadata
         uses: actions/upload-artifact@v4
         with:
-          name: faster-whisper-small-model
-          path: bundle/model
+          name: faster-whisper-small-meta
+          path: bundle/model_meta
           compression-level: 0
           retention-days: 1
 
-      - name: Upload offline wheels
+      - name: Upload model part 00
         uses: actions/upload-artifact@v4
         with:
-          name: faster-whisper-wheels
-          path: bundle/wheels
+          name: faster-whisper-small-part00
+          path: bundle/model_parts/model.bin.part-00
+          compression-level: 0
+          retention-days: 1
+
+      - name: Upload model part 01
+        uses: actions/upload-artifact@v4
+        with:
+          name: faster-whisper-small-part01
+          path: bundle/model_parts/model.bin.part-01
+          compression-level: 0
+          retention-days: 1
+
+      - name: Upload model part 02
+        uses: actions/upload-artifact@v4
+        with:
+          name: faster-whisper-small-part02
+          path: bundle/model_parts/model.bin.part-02
+          compression-level: 0
+          retention-days: 1
+
+      - name: Upload model part 03
+        uses: actions/upload-artifact@v4
+        with:
+          name: faster-whisper-small-part03
+          path: bundle/model_parts/model.bin.part-03
           compression-level: 0
           retention-days: 1
