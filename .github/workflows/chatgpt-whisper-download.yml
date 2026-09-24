@@ -1,4 +1,4 @@
-name: ChatGPT Whisper Bundle
+name: ChatGPT Whisper Base
 on:
   push:
     branches:
@@ -7,69 +7,34 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     steps:
       - name: Set up Python 3.13
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
 
-      - name: Download faster-whisper multilingual small model
+      - name: Download faster-whisper base multilingual model
         shell: bash
         run: |
           set -euxo pipefail
           python -m pip install --upgrade pip
-          python -m pip install --no-cache-dir faster-whisper huggingface-hub
-          mkdir -p bundle/model bundle/model_meta bundle/model_parts
+          python -m pip install --no-cache-dir huggingface-hub
+          mkdir -p bundle/model
           python - <<'PY'
           from huggingface_hub import snapshot_download
           snapshot_download(
-              repo_id="Systran/faster-whisper-small",
+              repo_id="Systran/faster-whisper-base",
               local_dir="bundle/model",
           )
           PY
-          cp -a bundle/model/. bundle/model_meta/
-          rm -f bundle/model_meta/model.bin
-          split -b 120M -d -a 2 bundle/model/model.bin bundle/model_parts/model.bin.part-
-          ls -lh bundle/model/model.bin bundle/model_parts/*
-          du -sh bundle/model_meta bundle/model_parts
+          du -sh bundle/model
+          ls -lh bundle/model
 
-      - name: Upload model metadata
+      - name: Upload base model
         uses: actions/upload-artifact@v4
         with:
-          name: faster-whisper-small-meta
-          path: bundle/model_meta
-          compression-level: 0
-          retention-days: 1
-
-      - name: Upload model part 00
-        uses: actions/upload-artifact@v4
-        with:
-          name: faster-whisper-small-part00
-          path: bundle/model_parts/model.bin.part-00
-          compression-level: 0
-          retention-days: 1
-
-      - name: Upload model part 01
-        uses: actions/upload-artifact@v4
-        with:
-          name: faster-whisper-small-part01
-          path: bundle/model_parts/model.bin.part-01
-          compression-level: 0
-          retention-days: 1
-
-      - name: Upload model part 02
-        uses: actions/upload-artifact@v4
-        with:
-          name: faster-whisper-small-part02
-          path: bundle/model_parts/model.bin.part-02
-          compression-level: 0
-          retention-days: 1
-
-      - name: Upload model part 03
-        uses: actions/upload-artifact@v4
-        with:
-          name: faster-whisper-small-part03
-          path: bundle/model_parts/model.bin.part-03
+          name: faster-whisper-base-model
+          path: bundle/model
           compression-level: 0
           retention-days: 1
