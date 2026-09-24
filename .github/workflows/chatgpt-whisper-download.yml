@@ -29,19 +29,20 @@ jobs:
               local_dir="bundle/model",
           )
           PY
-          python - <<'PY'
-          import os
-          total = 0
-          for root, _, files in os.walk("bundle"):
-              for f in files:
-                  total += os.path.getsize(os.path.join(root, f))
-          print(f"bundle bytes: {total}")
-          PY
+          du -sh bundle/model bundle/wheels
 
-      - name: Upload Whisper bundle
+      - name: Upload Whisper model
         uses: actions/upload-artifact@v4
         with:
-          name: faster-whisper-small-bundle
-          path: bundle
+          name: faster-whisper-small-model
+          path: bundle/model
+          compression-level: 0
+          retention-days: 1
+
+      - name: Upload offline wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: faster-whisper-wheels
+          path: bundle/wheels
           compression-level: 0
           retention-days: 1
