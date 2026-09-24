@@ -1,0 +1,47 @@
+name: ChatGPT Whisper Bundle
+on:
+  push:
+    branches:
+      - chatgpt-whisper-temp
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Download faster-whisper wheels and multilingual small model
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python -m pip install --upgrade pip
+          mkdir -p bundle/wheels bundle/model
+          python -m pip download --dest bundle/wheels faster-whisper
+          python -m pip install --no-cache-dir faster-whisper huggingface-hub
+          python - <<'PY'
+          from huggingface_hub import snapshot_download
+          snapshot_download(
+              repo_id="Systran/faster-whisper-small",
+              local_dir="bundle/model",
+          )
+          PY
+          python - <<'PY'
+          import os
+          total = 0
+          for root, _, files in os.walk("bundle"):
+              for f in files:
+                  total += os.path.getsize(os.path.join(root, f))
+          print(f"bundle bytes: {total}")
+          PY
+
+      - name: Upload Whisper bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: faster-whisper-small-bundle
+          path: bundle
+          compression-level: 0
+          retention-days: 1
